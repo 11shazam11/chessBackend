@@ -67,7 +67,7 @@ const allowedOrigins = ["http://localhost:5173", "http://localhost:3000"];
 function isAllowed(origin) {
   if (!origin) return true; // Postman/curl/no-origin requests
   if (allowedOrigins.includes(origin)) return true;
-  if (origin.endsWith(".vercel.app")) return true; // Vercel preview URLs change often
+  if (origin.endsWith(".vercel.app")) return true; // allow any Vercel preview/prod
   return false;
 }
 
@@ -81,11 +81,11 @@ const corsMiddleware = cors({
   allowedHeaders: ["Content-Type", "Authorization"],
 });
 
-// ✅ apply CORS before anything else
+// ✅ Apply CORS before anything else
 app.use(corsMiddleware);
 
-// ✅ handle ALL preflight with the SAME config
-app.options("*", corsMiddleware);
+// ✅ Preflight handler (DEPLOY SAFE: no "*")
+app.options(/.*/, corsMiddleware);
 
 /* -------------------------- Body + Cookies -------------------------- */
 app.use(express.json());
@@ -98,7 +98,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/tournaments", tournamentRoutes);
 app.use("/api/rounds", roundsRoutes);
 
-// Demo test of DB running
+// Demo test of DB
 app.get("/db", async (req, res) => {
   try {
     const result = await db.query("SELECT NOW()");
