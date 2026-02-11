@@ -18,7 +18,7 @@ import cors from "cors";
   app.use(cookieParser());
 
 app.use(cors({
-  origin: "http://localhost:5173", // frontend URL
+  origin: ["http://localhost:5173","https://chessbackend-production-cffd.up.railway.app/"], // frontend URL
   credentials: true
 }));
 app.use("/api/users", userRoutes);
