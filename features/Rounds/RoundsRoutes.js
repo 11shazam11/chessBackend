@@ -28,4 +28,22 @@ roundsRoutes.post(
   },
 );
 
+//get latet round of a tournament
+roundsRoutes.get(
+  "/:tournamentId/current",
+  authMiddleware,
+  (req, res, next) => {
+    roundsController.getLatestRound(req, res, next);
+  },
+);
+
+//get all matches of a round
+roundsRoutes.get(
+  "/:roundId/matches",
+  authMiddleware,
+  (req, res, next) => {
+    roundsController.getRoundMatches(req, res, next);
+  }
+);
+
 export default roundsRoutes;

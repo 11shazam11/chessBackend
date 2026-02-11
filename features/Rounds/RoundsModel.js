@@ -46,6 +46,15 @@ class RoundsModel {
       //   Now start transaction only when we actually create
       await client.query("BEGIN");
 
+      //update the tournament status to ongoing if it is not already
+      const tournamentQuery = `SELECT status FROM tournaments WHERE id = $1 LIMIT 1`;
+      const tournamentResult = await client.query(tournamentQuery, [tournamentId]);
+        const tournamentStatus = tournamentResult.rows[0]?.status;
+      if (tournamentStatus !== "ongoing") {
+        await this.updateTournamentStatus(tournamentId, "ongoing");
+      }
+ 
+
       // create the round
       const roundQuery = `
       INSERT INTO rounds (tournament_id, round_number)
@@ -192,6 +201,21 @@ class RoundsModel {
       );
     }
   }
+  //change the status of tournament completerd or ongoing
+  async updateTournamentStatus(tournamentId, status) {
+    const query = `UPDATE tournaments SET status = $1 WHERE id = $2 RETURNING *`;
+    const values = [status, tournamentId];
+    try {
+      const res = await db.query(query, values);
+      return res.rows[0];
+    } catch (error) {
+      console.error("Error updating tournament status:", error);
+      throw new ApplicationError(
+        500,
+        `Failed to update tournament status: ${error.message}`,
+      );
+    }
+  }
 
   //handle next round
   async handleNextRound(
@@ -257,6 +281,8 @@ class RoundsModel {
       //  If only 1 winner left: tournament completed
       if (winnerIds.length === 1) {
         await client.query("COMMIT");
+
+        await this.updateTournamentStatus(tournamentId, "completed");
         return {
           status: "COMPLETED",
           tournamentId,
@@ -411,6 +437,37 @@ class RoundsModel {
       );
     } finally {
       client.release();
+    }
+  }
+
+  //get latest round for a tournament
+  async getLatestRoundforTournament(tournamentId) {
+    try {
+      const query = ` SELECT * FROM rounds
+      WHERE tournament_id = $1
+      ORDER BY round_number DESC
+      LIMIT 1`;
+      const result = await db.query(query, [tournamentId]);
+      return result.rows[0] || null;
+    }catch (error) {
+      throw new ApplicationError(
+        500,
+        `Failed to fetch latest round: ${error.message}`,
+      );
+    }
+  }
+
+  //get all matches for a round
+  async getMatchesForRound(roundId) {
+    try {
+      const query = `SELECT * FROM matches WHERE round_id = $1 ORDER BY id ASC`;
+      const result = await db.query(query, [roundId]);
+      return result.rows;
+    } catch (error) {
+      throw new ApplicationError(
+        500,
+        `Failed to fetch matches for round: ${error.message}`,
+      );
     }
   }
 }

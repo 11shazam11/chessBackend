@@ -67,6 +67,30 @@ class RoundsController {
       next(new ApplicationError(500, ` Failed to create next round: ${error}`));
     }
   }
+
+  //get latest round for a tournament
+  async getLatestRound(req, res, next) {
+    try {
+      const { tournamentId } = req.params;
+      const round = await this.roundsModel.getLatestRoundforTournament(tournamentId);
+      if (!round) {
+        return res.status(404).json({ message: "No rounds found for this tournament" });
+      }
+      res.status(200).json(round);
+    } catch (error) {
+      next(new ApplicationError(500, ` Failed to get latest round: ${error.message}`));
+    }
+  }
+
+  async getRoundMatches(req, res, next) {
+    try {
+      const { roundId } = req.params;
+      const matches = await this.roundsModel.getMatchesForRound(roundId);
+      res.status(200).json(matches);
+    } catch (error) {
+      next(new ApplicationError(500, ` Failed to get round matches: ${error.message}`));
+    }
+  }
 }
 
 export default RoundsController;
