@@ -46,4 +46,13 @@ roundsRoutes.get(
   }
 );
 
+//declare reandom winners for all matches in a round
+roundsRoutes.post(
+  "/:roundId/declare-random-winners",
+  authMiddleware,
+  (req, res, next) => {
+    roundsController.declareRandomWinners(req, res, next);
+  }
+);
+
 export default roundsRoutes;

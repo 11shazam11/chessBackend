@@ -124,6 +124,17 @@ class TournamentContoller {
       next(error);
     }
 }
+//add players to tournament by ids
+async addPlayersByIds(req,res,next){
+  try{
+    const tournamentId = req.params.id;
+    const allplayerIds = req.body.playerIds;
+    await this.tournamentModel.addAllPlayers(tournamentId,allplayerIds);
+    res.status(200).send({message:"Successfully added players to tournament",playerIds:allplayerIds});
+  }catch(error){
+    next(error);
+  }
+}
 }
 
 export default TournamentContoller;

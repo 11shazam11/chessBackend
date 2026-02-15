@@ -91,6 +91,17 @@ class RoundsController {
       next(new ApplicationError(500, ` Failed to get round matches: ${error.message}`));
     }
   }
+
+  //declare random winners for all matches in a round
+  async declareRandomWinners(req, res, next) {
+    try {
+      const { roundId } = req.params;
+      const data = await this.roundsModel.randomWinners(roundId);
+      res.status(200).json({ message: "Random winners declared for all matches in the round",result:data });
+    } catch (error) {
+      next(error); 
+    }
+  }
 }
 
 export default RoundsController;

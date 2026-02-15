@@ -149,6 +149,9 @@ class RoundsModel {
         matches.push(matchResult.rows[0]);
       }
 
+      //update the round status to ongoing
+      const updateRoundStatusQuery = `UPDATE rounds SET status = 'ongoing' WHERE id = $1`;
+      await client.query(updateRoundStatusQuery, [round.id]);   
       await client.query("COMMIT");
       return { round, matches };
     } catch (error) {
@@ -468,6 +471,52 @@ class RoundsModel {
         500,
         `Failed to fetch matches for round: ${error.message}`,
       );
+    }
+  }
+
+  //declare random player as winner for a match and update the match result
+  async randomWinners(roundId) {
+    try {
+      //chect the round status
+      const roundStatusQuery = `SELECT status FROM rounds WHERE id = $1 LIMIT 1`;
+      const roundStatusResult = await db.query(roundStatusQuery, [roundId]);
+      const roundStatus = roundStatusResult.rows[0]?.status;
+      if(roundStatus == "completed"){
+        throw new ApplicationError(400, "Round is completed. Winners are already declared.");
+      }
+      const matches = await this.getMatchesForRound(roundId);
+      //update each match with random winner
+      for(const match of matches){
+        if(match.result === "pending"){
+          const whiteId = match.white_player_id;
+          const blackId = match.black_player_id;
+          const winnerId = Math.random() < 0.5 ? whiteId : blackId;
+          if(winnerId === whiteId){
+            await this.updateMatchResult(match.id, "white_win", winnerId);
+          }else{
+            await this.updateMatchResult(match.id, "black_win", winnerId);
+          }
+          
+        }
+      }
+      //update the round status
+      const roundQuery = `UPDATE rounds SET status = 'completed' WHERE id = $1 RETURNING *`;
+      await db.query(roundQuery, [roundId]);
+
+      //return winners of the round
+      const winnersQuery = `SELECT winner_player_id FROM matches WHERE round_id = $1`;
+      const winnersRows = await db.query(winnersQuery, [roundId]);
+      //fetch winner players data
+      const winnerPlayerIds = winnersRows.rows.map(row => row.winner_player_id);
+      const winnerPlayersQuery = `SELECT * FROM users WHERE id = ANY($1)`;
+      const winnerPlayersRows = await db.query(winnerPlayersQuery, [winnerPlayerIds]);
+      console.log("Declared random winners for round", roundId, "Winners:", winnerPlayersRows.rows);
+      return {
+        roundId,
+        winners: winnerPlayersRows.rows,
+      };
+    } catch (error) {
+      throw new ApplicationError(500,`failed to declare winners : ${error.message}`);
     }
   }
 }

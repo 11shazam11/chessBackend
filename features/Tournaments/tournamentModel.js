@@ -220,6 +220,19 @@ async addPlayerToTournament({ tournamentId, userId }) {
   }
 }
 
+//get all players registered for a tournament
+async addAllPlayers(tournamentId,allplayerIds) {
+  try {
+    for(const playerId of allplayerIds){
+      const newPlayer = await this.addPlayerToTournament({ tournamentId, userId: playerId });
+      if (!newPlayer) {
+        throw new ApplicationError(400, `Failed to add player ${playerId} to tournament ${tournamentId}`);
+      }
+    }
+  } catch (error) {
+    throw error;
+  }
+}
 //fetch registered players for a tournament
 async getPlayersForTournament(tournamentId){
   try {

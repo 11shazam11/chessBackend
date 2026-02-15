@@ -39,5 +39,10 @@ tournamentRoutes.get("/:id/participants", authMiddleware, (req, res, next) => {
 tournamentRoutes.get("/:id", authMiddleware, (req, res, next) => {
   tournamentController.getTournamentById(req, res, next);
 });
+
+//register players by id
+tournamentRoutes.post("/:id/register-players", authMiddleware, (req, res, next) => {
+  tournamentController.addPlayersByIds(req, res, next);
+});
 export default tournamentRoutes;
   
