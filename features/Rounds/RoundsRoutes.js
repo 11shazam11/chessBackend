@@ -5,7 +5,7 @@ import { authMiddleware } from "../../config/jwtAuth.js";
 const roundsController = new RoundsController();
 
 const roundsRoutes = express.Router();
-
+//only create frist round 
 roundsRoutes.post(
   "/:tournamentId/rounds/:roundNumber",
   authMiddleware,
@@ -54,5 +54,5 @@ roundsRoutes.post(
     roundsController.declareRandomWinners(req, res, next);
   }
 );
-
+ 
 export default roundsRoutes;

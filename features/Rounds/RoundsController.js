@@ -10,6 +10,7 @@ class RoundsController {
   async createRound(req, res, next) {
     try {
       const { tournamentId, roundNumber } = req.params;
+      console.log("Creating round for tournamentId:", tournamentId, "roundNumber:", roundNumber);
       const seeding = "random";
       const byePolicy = "random";
       const round = await this.roundsModel.createRoundandMatches(

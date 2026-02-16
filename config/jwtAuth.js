@@ -53,7 +53,6 @@ export function authMiddleware(req, res, next) {
       username: decode.username,
       userrole: decode.userrole,
     };
-    console.log(req.user);
     next();
   } catch (error) {
     throw new ApplicationError(401, "Token not found or expired");

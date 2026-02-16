@@ -48,12 +48,13 @@ class RoundsModel {
 
       //update the tournament status to ongoing if it is not already
       const tournamentQuery = `SELECT status FROM tournaments WHERE id = $1 LIMIT 1`;
-      const tournamentResult = await client.query(tournamentQuery, [tournamentId]);
-        const tournamentStatus = tournamentResult.rows[0]?.status;
+      const tournamentResult = await client.query(tournamentQuery, [
+        tournamentId,
+      ]);
+      const tournamentStatus = tournamentResult.rows[0]?.status;
       if (tournamentStatus !== "ongoing") {
         await this.updateTournamentStatus(tournamentId, "ongoing");
       }
- 
 
       // create the round
       const roundQuery = `
@@ -151,7 +152,7 @@ class RoundsModel {
 
       //update the round status to ongoing
       const updateRoundStatusQuery = `UPDATE rounds SET status = 'ongoing' WHERE id = $1`;
-      await client.query(updateRoundStatusQuery, [round.id]);   
+      await client.query(updateRoundStatusQuery, [round.id]);
       await client.query("COMMIT");
       return { round, matches };
     } catch (error) {
@@ -240,6 +241,10 @@ class RoundsModel {
        LIMIT 1`,
         [currentRoundId],
       );
+      console.log(
+        "Fetched current round for next round handling:",
+        roundRes.rows[0],
+      );
 
       const currentRound = roundRes.rows[0];
       if (!currentRound) throw new ApplicationError(404, "Round not found");
@@ -272,6 +277,7 @@ class RoundsModel {
         [currentRoundId],
       );
 
+      console.log("Fetched winners for current round:", winnersRes.rows);
       const winnerIds = winnersRes.rows.map((r) => r.winner_player_id);
 
       if (winnerIds.length === 0) {
@@ -452,7 +458,7 @@ class RoundsModel {
       LIMIT 1`;
       const result = await db.query(query, [tournamentId]);
       return result.rows[0] || null;
-    }catch (error) {
+    } catch (error) {
       throw new ApplicationError(
         500,
         `Failed to fetch latest round: ${error.message}`,
@@ -481,22 +487,24 @@ class RoundsModel {
       const roundStatusQuery = `SELECT status FROM rounds WHERE id = $1 LIMIT 1`;
       const roundStatusResult = await db.query(roundStatusQuery, [roundId]);
       const roundStatus = roundStatusResult.rows[0]?.status;
-      if(roundStatus == "completed"){
-        throw new ApplicationError(400, "Round is completed. Winners are already declared.");
+      if (roundStatus == "completed") {
+        throw new ApplicationError(
+          400,
+          "Round is completed. Winners are already declared.",
+        );
       }
       const matches = await this.getMatchesForRound(roundId);
       //update each match with random winner
-      for(const match of matches){
-        if(match.result === "pending"){
+      for (const match of matches) {
+        if (match.result === "pending") {
           const whiteId = match.white_player_id;
           const blackId = match.black_player_id;
           const winnerId = Math.random() < 0.5 ? whiteId : blackId;
-          if(winnerId === whiteId){
+          if (winnerId === whiteId) {
             await this.updateMatchResult(match.id, "white_win", winnerId);
-          }else{
+          } else {
             await this.updateMatchResult(match.id, "black_win", winnerId);
           }
-          
         }
       }
       //update the round status
@@ -507,16 +515,28 @@ class RoundsModel {
       const winnersQuery = `SELECT winner_player_id FROM matches WHERE round_id = $1`;
       const winnersRows = await db.query(winnersQuery, [roundId]);
       //fetch winner players data
-      const winnerPlayerIds = winnersRows.rows.map(row => row.winner_player_id);
+      const winnerPlayerIds = winnersRows.rows.map(
+        (row) => row.winner_player_id,
+      );
       const winnerPlayersQuery = `SELECT * FROM users WHERE id = ANY($1)`;
-      const winnerPlayersRows = await db.query(winnerPlayersQuery, [winnerPlayerIds]);
-      console.log("Declared random winners for round", roundId, "Winners:", winnerPlayersRows.rows);
+      const winnerPlayersRows = await db.query(winnerPlayersQuery, [
+        winnerPlayerIds,
+      ]);
+      console.log(
+        "Declared random winners for round",
+        roundId,
+        "Winners:",
+        winnerPlayersRows.rows,
+      );
       return {
         roundId,
         winners: winnerPlayersRows.rows,
       };
     } catch (error) {
-      throw new ApplicationError(500,`failed to declare winners : ${error.message}`);
+      throw new ApplicationError(
+        500,
+        `failed to declare winners : ${error.message}`,
+      );
     }
   }
 }

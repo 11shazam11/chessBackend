@@ -66,12 +66,7 @@ class UserModel {
         token,
       };
     } catch (error) {
-      if (error instanceof ApplicationError) throw error;
-
-      throw new ApplicationError(
-        500,
-        "Internal server Error. Please try again later",
-      );
+      throw error;
     }
   }
 

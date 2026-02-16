@@ -1,8 +1,11 @@
 import db from "../../config/db.js";
+import UserModel from "../Users/userModel.js";
 import ApplicationError from "../../config/applicationError.js";
 
-
 class TournamentModel {
+  constructor() {
+    this.userModel = new UserModel();
+  }
   async registerTournament(data) {
     try {
       const {
@@ -77,25 +80,38 @@ class TournamentModel {
 
       // FK error: organizer_user_id not found in users table
       if (error?.code === "23503") {
-        throw new ApplicationError(400, "Invalid organizer_user_id (user not found)");
+        throw new ApplicationError(
+          400,
+          "Invalid organizer_user_id (user not found)",
+        );
       }
 
       // enum error etc
-      throw new ApplicationError(500, "Internal server error. Please try again later");
+      throw new ApplicationError(
+        500,
+        "Internal server error. Please try again later",
+      );
     }
   }
 
-//update tournament status 
+  //update tournament status
   async updateTournamentStatus(tournamentId, status, userId) {
     try {
       //check if the tournament exists and user is organizer of the tournament
-      console.log("updateTournamentStatus called with:", { tournamentId, status, userId });
+      console.log("updateTournamentStatus called with:", {
+        tournamentId,
+        status,
+        userId,
+      });
       const tournament = await this.getTournamentById(tournamentId);
       if (!tournament) {
         throw new ApplicationError(404, "Tournament not found");
       }
       if (tournament.organizer_user_id !== userId) {
-        throw new ApplicationError(403, "Only the organizer can update tournament status");
+        throw new ApplicationError(
+          403,
+          "Only the organizer can update tournament status",
+        );
       }
 
       const sql = `
@@ -108,25 +124,30 @@ class TournamentModel {
       const result = await db.query(sql, values);
       return result.rows[0];
     } catch (error) {
-      throw new ApplicationError(500, `Failed to update tournament status: ${error.message}`);
+      throw new ApplicationError(
+        500,
+        `Failed to update tournament status: ${error.message}`,
+      );
     }
   }
-//get organizer tournaments
-async getTournamentsByOrganizer(userId) {
-  try{
-    const sql = `
+  //get organizer tournaments
+  async getTournamentsByOrganizer(userId) {
+    try {
+      const sql = `
       SELECT *
       FROM tournaments
       WHERE organizer_user_id = $1
     `;
-    const values = [userId];
-    const result = await db.query(sql, values);
-    return result.rows;
-  } catch (error) {
-    throw new ApplicationError(500, "Failed to fetch tournaments by organizer");
+      const values = [userId];
+      const result = await db.query(sql, values);
+      return result.rows;
+    } catch (error) {
+      throw new ApplicationError(
+        500,
+        "Failed to fetch tournaments by organizer",
+      );
+    }
   }
-}
-
 
   async getTournamentById(tournamentId) {
     try {
@@ -143,11 +164,9 @@ async getTournamentsByOrganizer(userId) {
     }
   }
 
- 
-
   async allTournaments() {
-  try {
-    const sql = `
+    try {
+      const sql = `
       SELECT
         id,
         organizer_name,
@@ -167,104 +186,122 @@ async getTournamentsByOrganizer(userId) {
       ORDER BY created_at DESC
     `;
 
-    const result = await db.query(sql);
-    return result.rows;
-
-  } catch (error) {
-    throw new ApplicationError(500, "Failed to fetch tournaments");
-  }
-}
-
-async addPlayerToTournament({ tournamentId, userId }) {
-  try {
-    
-    if (!tournamentId || !userId) {
-      throw new ApplicationError(400, "tournamentId and userId are required");
+      const result = await db.query(sql);
+      return result.rows;
+    } catch (error) {
+      throw new ApplicationError(500, "Failed to fetch tournaments");
     }
+  }
 
-    //check the status of the tournament and max players
-    const tournament = await this.getTournamentById(tournamentId);
-    if(tournament.status !== "registration_open"){
-      throw new ApplicationError(400, "Tournament registration is closed");
-    };
-    // optional check 
-    const checkSql = `
+  async addPlayerToTournament({ tournamentId, userId }) {
+    try {
+      if (!tournamentId || !userId) {
+        throw new ApplicationError(400, "tournamentId and userId are required");
+      }
+
+      //check the status of the tournament and max players
+      const tournament = await this.getTournamentById(tournamentId);
+      if (tournament.status !== "registration_open") {
+        throw new ApplicationError(400, "Tournament registration is closed");
+      }
+      // optional check
+      const checkSql = `
       SELECT 1
       FROM tournament_players
       WHERE tournament_id = $1 AND user_id = $2
       LIMIT 1
     `;
-    const checkResult = await db.query(checkSql, [tournamentId, userId]);
-    if (checkResult.rows.length > 0) {
-      return 1;  //controller will hande the user already registered error
-    }
+      const checkResult = await db.query(checkSql, [tournamentId, userId]);
+      if (checkResult.rows.length > 0) {
+        return 1; //controller will hande the user already registered error
+      }
+      //add user details to tournament players table
+      const getUserDetails = await this.userModel.userInfo(userId);
+      if (!getUserDetails) {
+        throw new ApplicationError(404, "User not found");
+      }
 
-    const sql = `
-      INSERT INTO tournament_players (tournament_id, user_id)
-      VALUES ($1, $2)
+      const sql = `
+      INSERT INTO tournament_players (tournament_id, user_id,rating)
+      VALUES ($1, $2, $3)
       RETURNING *
     `;
-    const result = await db.query(sql, [tournamentId, userId]);
-    return result.rows[0];
-  } catch (error) {
-    console.log("addPlayerToTournament error:", error);
+      const result = await db.query(sql, [
+        tournamentId,
+        userId,
+        getUserDetails.rating,
+      ]);
+      return result.rows[0];
+    } catch (error) {
+      console.log("addPlayerToTournament error:", error);
 
-  
-    if (error?.statusCode) throw error;
+      if (error?.statusCode) throw error;
 
-    if (error?.code === "23505") {
-      throw new ApplicationError(400, "User is already registered for this tournament");
-    }
-
-    throw new ApplicationError(500, "failed participation");
-  }
-}
-
-//get all players registered for a tournament
-async addAllPlayers(tournamentId,allplayerIds) {
-  try {
-    for(const playerId of allplayerIds){
-      const newPlayer = await this.addPlayerToTournament({ tournamentId, userId: playerId });
-      if (!newPlayer) {
-        throw new ApplicationError(400, `Failed to add player ${playerId} to tournament ${tournamentId}`);
+      if (error?.code === "23505") {
+        throw new ApplicationError(
+          400,
+          "User is already registered for this tournament",
+        );
       }
+
+      throw new ApplicationError(500, "failed participation");
     }
-  } catch (error) {
-    throw error;
   }
-}
-//fetch registered players for a tournament
-async getPlayersForTournament(tournamentId){
-  try {
-    const sql = `
+
+  //get all players registered for a tournament
+  async addAllPlayers(tournamentId, allplayerIds) {
+    try {
+      for (const playerId of allplayerIds) {
+        const newPlayer = await this.addPlayerToTournament({
+          tournamentId,
+          userId: playerId,
+        });
+        if (!newPlayer) {
+          throw new ApplicationError(
+            400,
+            `Failed to add player ${playerId} to tournament ${tournamentId}`,
+          );
+        }
+      }
+    } catch (error) {
+      throw error;
+    }
+  }
+  //fetch registered players for a tournament
+  async getPlayersForTournament(tournamentId) {
+    try {
+      const sql = `
       SELECT tp.user_id, u.name, u.rating
       FROM tournament_players tp
       JOIN users u ON tp.user_id = u.id
       WHERE tp.tournament_id = $1
     `;
-    const values = [tournamentId];
-    const result = await db.query(sql, values);
-    return result.rows;
-  } catch (error) {
-    throw new ApplicationError(500,`failed to fetch players for tournament ${tournamentId} ${error.message}`);
+      const values = [tournamentId];
+      const result = await db.query(sql, values);
+      return result.rows;
+    } catch (error) {
+      throw new ApplicationError(
+        500,
+        `failed to fetch players for tournament ${tournamentId} ${error.message}`,
+      );
+    }
   }
-}
 
-//all tournamets a player is registered in
-async getTournamentsForPlayer(userId){
-  try {
-    const sql = `
+  //all tournamets a player is registered in
+  async getTournamentsForPlayer(userId) {
+    try {
+      const sql = `
       SELECT t.id, t.name, t.description, t.start_date, t.end_date
       FROM tournament_players tp
       JOIN tournaments t ON tp.tournament_id = t.id
       WHERE tp.user_id = $1
     `;
-    const values = [userId];
-    const result = await db.query(sql, values);
-    return result.rows;
-  } catch (error) {
-    throw new ApplicationError(500,"failed to fetch tournaments for player");
+      const values = [userId];
+      const result = await db.query(sql, values);
+      return result.rows;
+    } catch (error) {
+      throw new ApplicationError(500, "failed to fetch tournaments for player");
+    }
   }
-}
 }
 export default TournamentModel;
