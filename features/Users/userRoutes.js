@@ -13,8 +13,16 @@ userRoutes.post("/login",(req,res,next)=>{
     userController.loginUser(req,res,next);
 });
 
-userRoutes.get("/:id", (req, res, next) => {
-    userController.getUserById(req, res, next);
+
+
+
+//get all users
+userRoutes.get("/all", (req, res, next) => {
+    userController.getAllUsers(req, res, next);
   });
 
+  //get by id 
+  userRoutes.get("/:id", (req, res, next) => {
+    userController.getUserById(req, res, next);
+  });
 export default userRoutes;

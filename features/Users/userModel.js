@@ -84,6 +84,21 @@ class UserModel {
       throw new ApplicationError(500, "Error fetching user by ID");
     }
   }
+
+  //get all users
+  async allUsers() {
+    try {
+      const sql = `
+      SELECT id, name,role
+      FROM users
+      WHERE role = 'player'
+      `;
+      const result = await db.query(sql);
+      return result.rows;
+    } catch (error) {
+      throw new ApplicationError(500, "Error fetching all users");
+    }
+  }
 }
 
 export default UserModel;

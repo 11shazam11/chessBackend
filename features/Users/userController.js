@@ -68,6 +68,14 @@ class UserController {
             next(error);
         }
     }
+
+    async getAllUsers (req,res,next){
+        try {
+            const users = await this.userModel.allUsers();
+            res.status(200).json(users);
+        } catch (error) {
+            next(error);
+        }}
 }
 
 export default UserController;
