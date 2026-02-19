@@ -62,7 +62,11 @@ import roundsRoutes from "./features/Rounds/RoundsRoutes.js";
 const app = express();
 
 /* ------------------------- CORS (MUST BE FIRST) ------------------------- */
-const allowedOrigins = ["http://localhost:5173", "http://localhost:3000"];
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:3000",
+  "https://chesstourno.netlify.app/",
+];
 
 function isAllowed(origin) {
   if (!origin) return true; // Postman/curl/no-origin requests
