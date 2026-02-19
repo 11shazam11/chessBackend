@@ -71,7 +71,8 @@ const allowedOrigins = [
 function isAllowed(origin) {
   if (!origin) return true; // Postman/curl/no-origin requests
   if (allowedOrigins.includes(origin)) return true;
-  if (origin.endsWith(".vercel.app")) return true; // allow any Vercel preview/prod
+  if (origin.endsWith(".vercel.app")) return true;
+  if (origin.endsWith(".netlify.app")) return true; // allow any Netlify preview/prod
   return false;
 }
 
